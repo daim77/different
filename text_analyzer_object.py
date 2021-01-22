@@ -13,24 +13,23 @@ import os
 
 class TextCleaner:
 
+    def __init__(self, file_path: str, clean_file_name='clean_text.txt'):
+        self._full_path = file_path if os.path.isfile(file_path) else AttributeError
+        self.dir_path = os.path.dirname(file_path)
+        self.new_name = clean_file_name
+        self._raw_text = self.file_opener()
+        self._clean_text = self.text_cleaner()
 
-    def __init__(self, file_path: str, clean_file_name = 'clean_text.txt'):
-        self._fullPath = file_path if os.path.isfile(file_path) else AttributeError
-        self.dirPath = os.path.dirname(file_path)
-        self.newName = clean_file_name
-        self._rawText = self.file_opener()
-        self._cleanText = self.text_cleaner()
+    def file_opener(self):
+        with open(self._full_path, 'r') as file:
+            self._raw_text = file.read()
+        return self._raw_text
 
-    def file_opener():
-        with open(self._fullPath, 'r') as file:
-            self._rawText = file.read()
-        return self._rawText
-
-    def text_cleaner():
+    def text_cleaner(self):
         self._clean_text = [word.strip(string.punctuation) for word in self._raw_text.split()]
         return self._clean_text
 
-    def most_frekquent_words():
+    def most_frekquent_words(self):
         my_dict, top_list = {}, []
 
         for word in self._clean_text:
