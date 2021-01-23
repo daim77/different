@@ -19,11 +19,18 @@ class TextAnalyzer:
         else:
             print('wrong path or file name')
             exit()
-        self.dir_path = os.path.dirname(file_path)
+        self.dir_path = os.path.dirname(file_path) + '/'
         self.new_name = clean_file_name
         self._raw_text = self.file_opener()
         self.clean_text = self.text_cleaner()
-        self._result_file = self.top_words()
+        self._result_file = self.key_words()
+
+        with open(self.dir_path + self.new_name, 'w') as file:
+            file.write(''.join(str(self._result_file)))
+
+    @property
+    def len_text(self):
+        return len(self.clean_text)
 
     def file_opener(self):
         with open(self._full_path, 'r') as file:
@@ -32,7 +39,7 @@ class TextAnalyzer:
 
     def file_writer(self):
         with open(self.dir_path + self.new_name, 'w') as file:
-            file.write(''.join(self._result_file))
+            file.write(''.join(str(self._result_file)))
 
     def text_cleaner(self):
         self.clean_text = [word.strip(string.punctuation + '\n').lower()
@@ -40,8 +47,8 @@ class TextAnalyzer:
                            ]
         return self.clean_text
 
-    def top_words(self, top_x=3):
-        my_dict, self._result_file = {}, []
+    def key_words(self, top_x=5):
+        my_dict, self._result_file = {}, {}
 
         for word in self.clean_text:
             if word not in my_dict:
@@ -49,18 +56,24 @@ class TextAnalyzer:
             else:
                 my_dict[word] += 1
 
-        top_list_values = sorted(my_dict.values())[:top_x]
+        if top_x == 999:
+            top_list_values = sorted(list(set(my_dict.values())), reverse=True)[::]
+        else:
+            top_list_values = sorted(list(set(my_dict.values())), reverse=True)[:top_x]
 
         for word in my_dict:
             if my_dict[word] in top_list_values:
-                self._result_file.append(word)
+                self._result_file[word] = my_dict[word]
+        self.file_writer()
         return self._result_file
+
+    def sorted_all(self):
+        sorted_list = sorted(self.key_words(999), key=self.key_words(999).get, reverse=True)
+        return sorted_list
 
 
 if __name__ == '__main__':
     trvalky = TextAnalyzer('/Users/martindanek/Downloads/raw_text.txt')
-    print(trvalky.dir_path)
-    print(trvalky.new_name)
-    print(trvalky.clean_text)
-    trvalky.top_words(5)
-    trvalky.file_writer()
+    trvalky.key_words(2)
+    print(trvalky.sorted_all())
+    print(trvalky.len_text)
