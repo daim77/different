@@ -1,7 +1,7 @@
-import streamlit as st
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
+import streamlit as st
 
 
 def read_sql(sql_string):
@@ -48,8 +48,6 @@ def recommend_book(option, df_rated_books):
                                           columns='title',
                                           values='rating')
 
-    result_list = []
-
     dataset_of_other_books = dataset_for_corr.copy(deep=False)
     dataset_of_other_books.drop([option], axis=1, inplace=True)
 
@@ -76,14 +74,12 @@ def recommend_book(option, df_rated_books):
     corr_fellowship = pd.DataFrame(
         list(zip(book_titles, correlations, avgrating)),
         columns=['book', 'corr', 'avg_rating'])
-    result_list\
-        .append(
-        corr_fellowship
-            .sort_values('corr', ascending=False)
-            .head(10)
-    )
 
-    return result_list[0]
+    return corr_fellowship.sort_values('corr', ascending = False).iloc[:3, :]
+
+
+def rec_image_link(df_rec, df):
+    pass
 
 
 if __name__ == '__main__':
@@ -111,7 +107,7 @@ if __name__ == '__main__':
 
     st.title('BOOK RECOMMENDATION TASK')
     st.balloons()
-    st.markdown('__BUY BOOK__')
+    st.markdown('__SELECTED BOOK__')
 
     df_rated_books = read_sql(basic_sql)
 
@@ -145,8 +141,11 @@ if __name__ == '__main__':
     st.sidebar.write('RATING')
     st.sidebar.write(f"{df['average_rating'][0]}")
 
-    st.markdown('__Buy recommended books__')
+    st.markdown('__RECOMMENDED BOOKS__')
 
-    st.write(recommend_book(option, df_rated_books))
+    df_rec = recommend_book(option, df_rated_books)
+    st.write(df)
+
+    rec_image_link(df_rec, df)
 
 # streamlit run task_stream.py
