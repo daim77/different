@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
 
 
@@ -17,8 +18,72 @@ def read_sql(sql_string):
     return pd.read_sql_query(sql_string, pi_conn)
 
 
-def recommend_book():
-    pass
+def recommend_book(option, df_rated_books):
+
+    selection = df_rated_books['title'] == option
+    readers = np.unique(df_rated_books.loc[selection, 'id'].to_list())
+
+    selection = df_rated_books['id'].isin(readers)
+    df_suitable_books = df_rated_books.loc[selection, :]
+
+    df_suit_books_freq = df_suitable_books \
+        .groupby(['title']) \
+        .agg({'rating': 'mean', 'id': 'count'}) \
+        .reset_index()
+
+    selection = df_suit_books_freq['id'] >= 8
+    books_to_compare = df_suit_books_freq.loc[
+        selection, 'title'].to_list()
+
+    selection = df_suitable_books['title'].isin(books_to_compare)
+    df_ratings_data_raw = df_suitable_books.loc[
+        selection, ['id', 'rating', 'title']]
+
+    df_mean_rate = df_ratings_data_raw \
+        .groupby(['id', 'title']) \
+        .agg({'rating': 'mean'}) \
+        .reset_index()
+
+    dataset_for_corr = df_mean_rate.pivot(index='id',
+                                          columns='title',
+                                          values='rating')
+
+    result_list = []
+
+    dataset_of_other_books = dataset_for_corr.copy(deep=False)
+    dataset_of_other_books.drop([option], axis=1, inplace=True)
+
+    book_titles = []
+    correlations = []
+    avgrating = []
+
+    for book_title in list(dataset_of_other_books.columns.values):
+        book_titles.append(book_title)
+
+        correlations\
+            .append(
+            dataset_for_corr[option]
+                .corr(dataset_of_other_books[book_title], method='kendall')
+        )
+
+        selection = df_ratings_data_raw['title'] == book_title
+        df_tab = df_ratings_data_raw\
+            .loc[selection, ['title', 'rating']]\
+            .groupby('title')\
+            .agg({'rating': 'mean'})
+        avgrating.append(df_tab['rating'].min())
+
+    corr_fellowship = pd.DataFrame(
+        list(zip(book_titles, correlations, avgrating)),
+        columns=['book', 'corr', 'avg_rating'])
+    result_list\
+        .append(
+        corr_fellowship
+            .sort_values('corr', ascending=False)
+            .head(10)
+    )
+
+    return result_list[0]
 
 
 if __name__ == '__main__':
@@ -82,6 +147,6 @@ if __name__ == '__main__':
 
     st.markdown('__Buy recommended books__')
 
-
+    st.write(recommend_book(option, df_rated_books))
 
 # streamlit run task_stream.py
