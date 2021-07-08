@@ -13,7 +13,7 @@ def read_sql(sql_string):
     psw = autent_list[2]
 
     conn_string = f"mysql+pymysql://{user}:{psw}@192.168.0.199/engeto"
-    pi_conn = create_engine(conn_string, echo=True)
+    pi_conn = create_engine(conn_string, echo=False)
 
     return pd.read_sql_query(sql_string, pi_conn)
 
@@ -31,7 +31,7 @@ def recommend_book(option, df_rated_books):
         .agg({'rating': 'mean', 'id': 'count'}) \
         .reset_index()
 
-    selection = df_suit_books_freq['id'] >= 8
+    selection = df_suit_books_freq['id'] >= 3
     books_to_compare = df_suit_books_freq.loc[
         selection, 'title'].to_list()
 
@@ -49,7 +49,10 @@ def recommend_book(option, df_rated_books):
                                           values='rating')
 
     dataset_of_other_books = dataset_for_corr.copy(deep=False)
-    dataset_of_other_books.drop([option], axis=1, inplace=True)
+    try:
+        dataset_of_other_books.drop([option], axis=1, inplace=True)
+    except:
+        return pd.DataFrame(columns=['tile', 'rating'])
 
     book_titles = []
     correlations = []
@@ -59,10 +62,9 @@ def recommend_book(option, df_rated_books):
         book_titles.append(book_title)
 
         correlations\
-            .append(
-            dataset_for_corr[option]
-                .corr(dataset_of_other_books[book_title], method='kendall')
-        )
+            .append(dataset_for_corr[option]
+                    .corr(dataset_of_other_books[book_title], method='pearson')
+                    )
 
         selection = df_ratings_data_raw['title'] == book_title
         df_tab = df_ratings_data_raw\
@@ -75,11 +77,7 @@ def recommend_book(option, df_rated_books):
         list(zip(book_titles, correlations, avgrating)),
         columns=['book', 'corr', 'avg_rating'])
 
-    return corr_fellowship.sort_values('corr', ascending = False).iloc[:3, :]
-
-
-def rec_image_link(df_rec, df):
-    pass
+    return corr_fellowship.sort_values('corr', ascending=False).iloc[:3, :]
 
 
 if __name__ == '__main__':
@@ -127,7 +125,7 @@ if __name__ == '__main__':
 
     df = read_sql(sql_string)
 
-    st.write(df)
+    st.write(df.iloc[0, :5])
     st.sidebar.image(f"{df['Image-URL-M'][0]}")
 
     isbn = df['ISBN'][0]
@@ -138,14 +136,24 @@ if __name__ == '__main__':
     """
     df = read_sql(sql_string)
 
-    st.sidebar.write('RATING')
-    st.sidebar.write(f"{df['average_rating'][0]}")
+    st.sidebar.write(f"RATING - {df['average_rating'][0]}")
 
     st.markdown('__RECOMMENDED BOOKS__')
+    st.sidebar.markdown('__RECOMMENDED BOOKS__')
 
     df_rec = recommend_book(option, df_rated_books)
-    st.write(df)
+    st.write(df_rec)
 
-    rec_image_link(df_rec, df)
+    try:
+        for book in df_rec['book'].to_list():
+            sql_string = f"""
+                SELECT `BX-Books`.`Image-URL-M`
+                FROM `BX-Books`
+                WHERE `BX-Books`.`Book-Title` = '{book}'
+            """
+            df = read_sql(sql_string)
+            st.sidebar.image(f"{df['Image-URL-M'].to_list()[0]}")
+    except:
+        st.sidebar.write('No recommended book!')
 
 # streamlit run task_stream.py
