@@ -15,7 +15,23 @@ class Person:
 
 
 class Trainee(Person):
-    pass
+    vacation_base = 20
+
+    def __init__(self, name, sex, address, nationality, birthday, id,
+                 department, performance=None):
+
+        super().__init__(name, sex, address, nationality, birthday)
+
+        self.id = id
+        self.department = department
+        self.performance = performance
+
+    @property
+    def get_vacation(self):
+        if self.performance:
+            return self.performance / 100 * Trainee.vacation_base
+        else:
+            raise AttributeError ('set performance first')
 
 
 class Employee(Person):
@@ -61,3 +77,7 @@ if __name__ == '__main__':
     Martin = Programmer('martin', 'male', 'Na Luka', 'CZE', date(1977, 6, 10),
                         '007', 'Euromedia', 50000, 'junior')
     print(Martin.age)
+
+    tom = Trainee('Tom', 'male', 'home', 'SK', date(1980, 10, 10),
+                  '10', 'IT')
+    print(tom.get_vacation())
